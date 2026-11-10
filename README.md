@@ -34,8 +34,8 @@ Når du er ferdig med endringene, oppdaterer du siden slik: gå til Netlify → 
 
 1. Gå til [sheets.google.com](https://sheets.google.com) og lag et nytt, tomt regneark.
 2. **Fil → Importer → Last opp** og velg `data/videoer.csv`. Velg «Erstatt regneark».
-3. **Fil → Del → Publiser på nettet.** Velg arket, velg formatet **Kommaseparerte verdier (.csv)** og trykk **Publiser**.
-4. Kopier lenken du får. Den brukes i steg 3.
+3. Trykk **Del** og sett tilgangen til **Alle med linken** kan **se**.
+4. Lenken til regnearket står i `netlify.toml` (`SHEET_CSV_URL`). Videoene leses fra den første fanen i arket.
 
 ### 2. GitHub
 
@@ -45,9 +45,7 @@ Koden ligger i et GitHub-repo. Netlify henter koden derfra og bygger siden.
 
 1. **Add new site → Import an existing project → GitHub**, og velg repoet.
 2. Innstillingene leses fra `netlify.toml`, så du trenger ikke å endre noe. Trykk **Deploy**.
-3. Gå til **Site configuration → Environment variables** og legg til:
-   - `SHEET_CSV_URL` = lenken fra steg 1.4
-4. Trykk **Trigger deploy** én gang, så siden henter videoene fra regnearket.
+3. Siden henter videoene fra regnearket hver gang den bygges.
 
 ### 4. Google Search Console
 

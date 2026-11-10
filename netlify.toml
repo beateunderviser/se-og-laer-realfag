@@ -4,6 +4,8 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  # Regnearket med videoene (må være delt som «Alle med linken kan se»)
+  SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/17M9X_rBIlTBoM5SxcAgJGoL2_lrEgl7ZiUj7ktUO0C4/export?format=csv"
 
 [[headers]]
   for = "/*"
