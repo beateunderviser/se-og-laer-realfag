@@ -26,7 +26,7 @@ Temaer i Kjemi 1: Atomer og periodesystemet, Sterke og svake bindinger, Kjemiske
 
 Nye temaer og Kjemi 2-temaer legges til i `config.mjs`.
 
-Siden bygges på nytt automatisk hver natt. Vil du se endringen med en gang: gå til Netlify → **Deploys** → **Trigger deploy** → **Deploy site**.
+Når du er ferdig med endringene, oppdaterer du siden slik: gå til Netlify → **Deploys** → **Trigger deploy** → **Deploy site**. Etter et halvt minutt er endringene ute på siden.
 
 ## Oppsett (gjøres én gang)
 
@@ -47,9 +47,7 @@ Koden ligger i et GitHub-repo. Netlify henter koden derfra og bygger siden.
 2. Innstillingene leses fra `netlify.toml`, så du trenger ikke å endre noe. Trykk **Deploy**.
 3. Gå til **Site configuration → Environment variables** og legg til:
    - `SHEET_CSV_URL` = lenken fra steg 1.4
-4. Gå til **Site configuration → Build & deploy → Build hooks**, lag en hook som heter «Daglig oppdatering», og kopier lenken. Legg den til som miljøvariabel:
-   - `BUILD_HOOK_URL` = lenken til build hooken
-5. Trykk **Trigger deploy** én gang, så siden henter videoene fra regnearket.
+4. Trykk **Trigger deploy** én gang, så siden henter videoene fra regnearket.
 
 ### 4. Google Search Console
 
@@ -65,5 +63,4 @@ Kjøp domenet, for eksempel hos Domeneshop. I Netlify går du til **Domain manag
 
 - `build.mjs` leser regnearket (eller `data/videoer.csv` hvis `SHEET_CSV_URL` ikke er satt) og lager ferdige HTML-sider i `dist/`. Ingen pakker må installeres.
 - `src/` inneholder stil, JavaScript og ikon.
-- `netlify/functions/daglig-oppdatering.mjs` starter en ny bygging hver natt kl. 03 (UTC).
 - Bygg lokalt: `node build.mjs`, og åpne `dist/` med en enkel webserver.
