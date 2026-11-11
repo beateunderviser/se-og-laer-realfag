@@ -3,6 +3,7 @@
 export const SITE = {
   navn: "Se og lær realfag",
   forfatter: "Beate Tollefsen",
+  bilde: "/beate-tollefsen.jpg",
   // Netlify fyller inn URL automatisk. Når du kobler på eget domene, brukes det.
   url: (process.env.URL || "https://seoglaerrealfag.netlify.app").replace(/\/$/, ""),
   youtube: "https://www.youtube.com/channel/UCX_Ogk2LFSfLtohYEv6uc2A",

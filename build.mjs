@@ -412,11 +412,12 @@ function omside() {
   return side({
     tittel: `Om ${SITE.navn} og ${SITE.forfatter}`,
     beskrivelse: `${SITE.navn} er laget av ${SITE.forfatter}, kjemilærer ved Sandefjord videregående skole. Videoene er en støtte til undervisningen i Kjemi 1 og Kjemi 2.`,
-    sti: "/om/", aktiv: "om",
+    sti: "/om/", aktiv: "om", bilde: SITE.bilde ? SITE.url + SITE.bilde : undefined,
     jsonld: [smulerLd(ledd), {
       "@type": "AboutPage", name: `Om ${SITE.navn}`, url: SITE.url + "/om/",
       mainEntity: {
         "@type": "Person", name: SITE.forfatter, jobTitle: "Lærer",
+        ...(SITE.bilde ? { image: SITE.url + SITE.bilde } : {}),
         worksFor: { "@type": "EducationalOrganization", name: "Sandefjord videregående skole" },
         alumniOf: { "@type": "CollegeOrUniversity", name: "OsloMet – storbyuniversitetet" },
         knowsAbout: ["Kjemi", "Naturfag", "Matematikk"], sameAs: [SITE.youtube],
@@ -424,7 +425,7 @@ function omside() {
     }],
     innhold: `${smuler(ledd)}
     <div class="om">
-      <div class="om-bilde">${SITE.bilde ? `<img src="${SITE.bilde}" alt="${esc(SITE.forfatter)}" width="320" height="320">` : `<span aria-hidden="true">BT</span>`}</div>
+      <div class="om-bilde">${SITE.bilde ? `<img src="${SITE.bilde}" alt="${esc(SITE.forfatter)}" width="640" height="800">` : `<span aria-hidden="true">BT</span>`}</div>
       <div class="om-tekst">
         <span class="eyebrow">Om meg</span>
         <h1>Hei, jeg heter ${esc(SITE.forfatter)}</h1>

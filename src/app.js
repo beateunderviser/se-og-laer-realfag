@@ -61,6 +61,9 @@
     skjerm.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&start=${start}" title="YouTube-video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
   }
   function videoFerdig() {
+    // Kryss av videoen som sett
+    const id = skjerm.dataset.yt;
+    if (!sett.has(id)) { sett.add(id); lagre("sl-sett", [...sett]); oppdater(); }
     const quiz = document.querySelector("details.quiz");
     if (!quiz || quiz.open) return;
     quiz.open = true;
