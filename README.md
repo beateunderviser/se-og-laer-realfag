@@ -62,3 +62,23 @@ Kjøp domenet, for eksempel hos Domeneshop. I Netlify går du til **Domain manag
 - `build.mjs` leser regnearket (eller `data/videoer.csv` hvis `SHEET_CSV_URL` ikke er satt) og lager ferdige HTML-sider i `dist/`. Ingen pakker må installeres.
 - `src/` inneholder stil, JavaScript og ikon.
 - Bygg lokalt: `node build.mjs`, og åpne `dist/` med en enkel webserver.
+
+## Formler i huskelapper og quiz
+
+Formler skrives med LaTeX, et vanlig språk for matematikk:
+
+- I huskelappen er kolonnen **innhold** for typen «formel» alltid en formel. Skriv den uten dollartegn.
+- Andre steder (begreper, tips, forklaringer og quiz) skriver du formler mellom to dollartegn: `$c = \frac{n}{V}$`.
+
+| Det du vil ha | Skriv |
+|---|---|
+| Brøk | `\frac{m}{M}` |
+| Senket skrift | `c_1`, `N_A` |
+| Hevet skrift | `r^2`, `10^{23}` |
+| Gangetegn (prikk) | `\cdot` |
+| Delta, sum, rho | `\Delta H`, `\sum`, `\rho` |
+| Likevektspil | `\rightleftharpoons` |
+| Vanlig tekst inni formel | `\text{mol}` |
+| Desimalkomma | `6{,}022` |
+
+Hvis en formel er skrevet feil, står det en advarsel i byggeloggen i Netlify, og formelen vises som ren tekst.

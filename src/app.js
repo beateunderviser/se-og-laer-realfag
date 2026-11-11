@@ -41,11 +41,47 @@
   });
 
   // Videospiller: laster YouTube først når eleven trykker play
+  // Bruker YouTubes spillerstyring, slik at vi vet når videoen er ferdig.
   const skjerm = document.querySelector(".skjerm[data-yt]");
-  function spill(start = 0) {
-    if (!skjerm) return;
-    const id = skjerm.dataset.yt;
+  let spiller = null;
+  function ytKlar() {
+    if (window.YT && window.YT.Player) return Promise.resolve();
+    return new Promise((ok, feil) => {
+      const forrige = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => { if (forrige) forrige(); ok(); };
+      if (!document.getElementById("yt-api")) {
+        const s = document.createElement("script");
+        s.id = "yt-api"; s.src = "https://www.youtube.com/iframe_api"; s.onerror = feil;
+        document.head.appendChild(s);
+      }
+      setTimeout(feil, 6000);
+    });
+  }
+  function enkelSpiller(id, start) {
     skjerm.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&start=${start}" title="YouTube-video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
+  }
+  function videoFerdig() {
+    const quiz = document.querySelector("details.quiz");
+    if (!quiz || quiz.open) return;
+    quiz.open = true;
+    quiz.classList.add("fremhevet");
+    quiz.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  async function spill(start = 0) {
+    if (!skjerm) return;
+    if (spiller && spiller.seekTo) { spiller.seekTo(start, true); spiller.playVideo(); return; }
+    const id = skjerm.dataset.yt;
+    try {
+      await ytKlar();
+      skjerm.innerHTML = '<div id="yt-spiller"></div>';
+      spiller = new YT.Player("yt-spiller", {
+        host: "https://www.youtube-nocookie.com", videoId: id,
+        playerVars: { autoplay: 1, rel: 0, start, playsinline: 1 },
+        events: { onStateChange: (e) => { if (e.data === YT.PlayerState.ENDED) videoFerdig(); } },
+      });
+    } catch {
+      enkelSpiller(id, start);
+    }
   }
   if (skjerm) {
     skjerm.querySelector(".spill").addEventListener("click", () => spill());

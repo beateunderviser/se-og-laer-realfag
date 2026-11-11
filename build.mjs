@@ -3,6 +3,7 @@
 import { readFile, writeFile, mkdir, rm, cp } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import path from "node:path";
+import katex from "katex";
 import { SITE, KURS, IKONER } from "./config.mjs";
 
 const OUT = "dist";
@@ -16,6 +17,18 @@ const slugify = (s) =>
     .replace(/æ/g, "ae").replace(/ø/g, "o").replace(/å/g, "a")
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+// Matematikk: tekst mellom $ og $ skrives som formel (LaTeX). Resten er vanlig tekst.
+const matteFeil = [];
+const tex = (uttrykk, stor = false) => {
+  try {
+    return katex.renderToString((stor ? "\\displaystyle " : "") + uttrykk, { throwOnError: true, output: "htmlAndMathml", strict: "ignore" });
+  } catch (e) {
+    matteFeil.push(`«${uttrykk}»: ${e.message}`);
+    return `<code>${esc(uttrykk)}</code>`;
+  }
+};
+const matte = (s = "") => String(s).split(/(\$[^$]+\$)/g).map((del) => (/^\$[^$]+\$$/.test(del) ? tex(del.slice(1, -1)) : esc(del))).join("");
 
 const norm = (s = "") => s.trim().toLowerCase().replace(/\s+/g, " ");
 
@@ -176,6 +189,7 @@ ${bilde ? `<meta property="og:image" content="${bilde}">\n<meta name="twitter:ca
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
 <link rel="stylesheet" href="/style.css?v=${CSS_V}">
+${innhold.includes('class="katex"') ? '<link rel="stylesheet" href="/katex/katex.min.css">' : ""}
 ${ld}
 </head>
 <body>
@@ -230,9 +244,9 @@ function huskelappHtml(t) {
   const formler = t.huskelapp.filter((x) => x.type === "formel");
   const begreper = t.huskelapp.filter((x) => x.type === "begrep");
   const tips = t.huskelapp.filter((x) => x.type === "tips");
-  return `${formler.length ? `<div class="formler">${formler.map((f) => `<div class="formel"><span class="formel-navn">${esc(f.tittel)}</span><span class="formel-uttrykk">${esc(f.innhold)}</span>${f.forklaring ? `<span class="formel-forkl">${esc(f.forklaring)}</span>` : ""}</div>`).join("")}</div>` : ""}
-    ${begreper.length ? `<dl class="begreper">${begreper.map((b) => `<div><dt>${esc(b.tittel)}</dt><dd>${esc(b.innhold)}${b.forklaring ? ` <span class="dempet">${esc(b.forklaring)}</span>` : ""}</dd></div>`).join("")}</dl>` : ""}
-    ${tips.length ? `<ul class="tips">${tips.map((x) => `<li><strong>${esc(x.tittel)}:</strong> ${esc(x.innhold)}${x.forklaring ? ` ${esc(x.forklaring)}` : ""}</li>`).join("")}</ul>` : ""}`;
+  return `${formler.length ? `<div class="formler">${formler.map((f) => `<div class="formel${f.innhold.length > 45 ? " bred" : ""}"><span class="formel-navn">${esc(f.tittel)}</span><span class="formel-uttrykk">${tex(f.innhold.replace(/^\$|\$$/g, ""), true)}</span>${f.forklaring ? `<span class="formel-forkl">${matte(f.forklaring)}</span>` : ""}</div>`).join("")}</div>` : ""}
+    ${begreper.length ? `<dl class="begreper">${begreper.map((b) => `<div><dt>${esc(b.tittel)}</dt><dd>${matte(b.innhold)}${b.forklaring ? ` <span class="dempet">${matte(b.forklaring)}</span>` : ""}</dd></div>`).join("")}</dl>` : ""}
+    ${tips.length ? `<ul class="tips">${tips.map((x) => `<li><strong>${esc(x.tittel)}:</strong> ${matte(x.innhold)}${x.forklaring ? ` ${matte(x.forklaring)}` : ""}</li>`).join("")}</ul>` : ""}`;
 }
 
 const malFor = (k, t) => (t.mal || []).map((kode) => k.kompetansemal?.find((m) => m.kode === kode)).filter(Boolean);
@@ -473,15 +487,15 @@ function videoside(k, t, v, i) {
           ${v.beskrivelse ? `<p class="beskr">${esc(v.beskrivelse)}</p>` : ""}
           ${v.eksamen ? `<p><span class="merke">Eksamensviktig</span></p>` : ""}
           ${stempler ? `<section class="blokk"><h2>Innhold i videoen</h2>${stempler}</section>` : ""}
-          ${v.quiz.length ? `<section class="blokk quiz" data-quiz="${v.id}">
-            <h2>Sjekk deg selv</h2>
+          ${v.quiz.length ? `<details class="quiz" data-quiz="${v.id}">
+            <summary><span class="quiz-tittel">Sjekk deg selv</span><span class="quiz-antall">${v.quiz.length} spørsmål</span></summary>
             <ol class="quiz-liste">${v.quiz.map((q, qi) => `<li class="sporsmal" data-riktig="${q.riktig}">
-              <p class="sporsmal-tekst">${esc(q.sporsmal)}</p>
-              <div class="alternativer">${q.alt.map((a, ai) => `<button type="button" class="alternativ" data-svar="${ai}"><span class="bokstav">${"ABCD"[ai]}</span>${esc(a)}</button>`).join("")}</div>
-              <p class="tilbakemelding" hidden><strong></strong> ${esc(q.forklaring)}</p>
+              <p class="sporsmal-tekst">${matte(q.sporsmal)}</p>
+              <div class="alternativer">${q.alt.map((a, ai) => `<button type="button" class="alternativ" data-svar="${ai}"><span class="bokstav">${"ABCD"[ai]}</span><span>${matte(a)}</span></button>`).join("")}</div>
+              <p class="tilbakemelding" hidden><strong></strong> ${matte(q.forklaring)}</p>
             </li>`).join("")}</ol>
             <div class="quiz-resultat" hidden><p></p><button type="button" class="knapp quiz-igjen">Prøv igjen</button></div>
-          </section>` : ""}
+          </details>` : ""}
           ${v.oppgaver ? `<section class="blokk"><h2>Oppgaver</h2><a class="oppgave" href="${esc(v.oppgaver)}" rel="noopener">Åpne oppgaver til denne videoen</a></section>` : ""}
           <div class="navrad">
             ${forrige ? `<a class="knapp" href="${forrige.sti}" rel="prev">← Forrige</a>` : `<span></span>`}
@@ -563,6 +577,8 @@ async function main() {
   await skriv("style.css", css);
   await skriv("app.js", js);
   await cp("src/favicon.svg", path.join(OUT, "favicon.svg"));
+  await cp("node_modules/katex/dist/katex.min.css", path.join(OUT, "katex/katex.min.css"));
+  await cp("node_modules/katex/dist/fonts", path.join(OUT, "katex/fonts"), { recursive: true });
 
   const sider = ["/"];
   await skriv("index.html", forside(data));
@@ -604,6 +620,7 @@ ${sider.map((s) => `  <url><loc>${SITE.url}${s}</loc><lastmod>${idag}</lastmod><
 `);
   await skriv("robots.txt", `User-agent: *\nAllow: /\n\nSitemap: ${SITE.url}/sitemap.xml\n`);
 
+  matteFeil.forEach((f) => console.warn("Advarsel: kunne ikke skrive formelen " + f));
   const antall = indeks.length;
   console.log(`Ferdig: ${antall} videoer, ${sider.length} sider i ${OUT}/`);
 }

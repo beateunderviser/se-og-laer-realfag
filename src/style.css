@@ -233,7 +233,9 @@ h2.under { font-size: 22px; margin: 48px 0 16px; }
 .formler { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
 .formel { display: grid; gap: 4px; align-content: start; padding: 12px 14px; border-radius: 10px; background: color-mix(in srgb, var(--c) 9%, var(--flate)); border: 1px solid color-mix(in srgb, var(--c) 25%, var(--flate)); }
 .formel-navn { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; color: var(--dempet); }
-.formel-uttrykk { font-family: var(--mono); font-size: 17px; color: var(--tekst); overflow-wrap: anywhere; }
+.formel-uttrykk { font-size: 17px; color: var(--tekst); overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+.formel-uttrykk .katex { white-space: nowrap; }
+@media (min-width: 760px) { .formel.bred { grid-column: span 2; } }
 .formel-forkl { font-size: 13px; color: var(--dempet); }
 .begreper { margin: 0; display: grid; gap: 0; }
 .begreper > div { display: grid; grid-template-columns: minmax(140px, 220px) minmax(0, 1fr); gap: 4px 18px; padding: 9px 0; border-top: 1px solid var(--strek); }
@@ -259,6 +261,17 @@ h2.under { font-size: 22px; margin: 48px 0 16px; }
 .mal-tema.gjennom { background: var(--bg); color: var(--dempet); border: 1px dashed var(--strek); }
 
 /* Quiz */
+details.quiz { border: 1px solid var(--strek); border-radius: 12px; overflow: hidden; }
+details.quiz > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--aksent-myk); }
+details.quiz > summary::-webkit-details-marker { display: none; }
+details.quiz > summary::before { content: ""; width: 9px; height: 9px; border: solid var(--aksent); border-width: 0 2px 2px 0; transform: rotate(-45deg); transition: transform .2s; flex: none; }
+details.quiz[open] > summary::before { transform: rotate(45deg); }
+.quiz-tittel { font-family: var(--display); font-weight: 600; font-size: 17px; color: var(--aksent); }
+.quiz-antall { margin-left: auto; font-size: 13px; color: var(--dempet); font-weight: 600; }
+details.quiz > .quiz-liste, details.quiz > .quiz-resultat { margin: 16px; }
+details.quiz.fremhevet > summary { animation: blink 1.2s ease 2; }
+@keyframes blink { 50% { background: color-mix(in srgb, var(--aksent) 25%, var(--flate)); } }
+
 .quiz-liste { margin: 0; padding: 0; list-style: none; display: grid; gap: 18px; counter-reset: q; }
 .sporsmal { counter-increment: q; display: grid; gap: 10px; }
 .sporsmal-tekst { font-weight: 600; }
