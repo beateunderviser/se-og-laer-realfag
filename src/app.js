@@ -142,5 +142,57 @@
     dato.addEventListener("change", () => { lagre("sl-dato", dato.value); eksamen(); });
   }
 
+  // Quiz
+  const quizLagret = les("sl-quiz", {});
+  function visQuizMerker() {
+    document.querySelectorAll("[data-quiz-merke]").forEach((m) => {
+      const r = quizLagret[m.dataset.quizMerke];
+      m.classList.toggle("tatt", !!r);
+      m.textContent = r ? `Quiz ${r.riktige}/${r.totalt}` : "Quiz";
+    });
+  }
+  document.querySelectorAll("[data-quiz]").forEach((quiz) => {
+    const sporsmal = [...quiz.querySelectorAll(".sporsmal")];
+    const resultat = quiz.querySelector(".quiz-resultat");
+    function sjekkFerdig() {
+      const besvart = sporsmal.filter((s) => s.dataset.besvart);
+      if (besvart.length < sporsmal.length) return;
+      const riktige = besvart.filter((s) => s.dataset.besvart === "ok").length;
+      resultat.querySelector("p").textContent = `Du fikk ${riktige} av ${sporsmal.length} riktige.` + (riktige === sporsmal.length ? " Godt jobbet!" : " Se gjerne videoen igjen og prøv på nytt.");
+      resultat.hidden = false;
+      quizLagret[quiz.dataset.quiz] = { riktige, totalt: sporsmal.length };
+      lagre("sl-quiz", quizLagret);
+    }
+    sporsmal.forEach((s) => {
+      s.querySelectorAll(".alternativ").forEach((b) => b.addEventListener("click", () => {
+        if (s.dataset.besvart) return;
+        const riktig = +s.dataset.riktig, valgt = +b.dataset.svar, ok = valgt === riktig;
+        s.dataset.besvart = ok ? "ok" : "nei";
+        s.querySelectorAll(".alternativ").forEach((x) => {
+          x.disabled = true;
+          const i = +x.dataset.svar;
+          if (i === riktig) x.classList.add("riktig");
+          else if (i === valgt) x.classList.add("feil");
+          else x.classList.add("nedtonet");
+        });
+        const t = s.querySelector(".tilbakemelding");
+        t.className = "tilbakemelding " + (ok ? "ok" : "nei");
+        t.querySelector("strong").textContent = ok ? "Riktig!" : `Ikke helt. Riktig svar er ${"ABCD"[riktig]}.`;
+        t.hidden = false;
+        sjekkFerdig();
+      }));
+    });
+    quiz.querySelector(".quiz-igjen").addEventListener("click", () => {
+      sporsmal.forEach((s) => {
+        delete s.dataset.besvart;
+        s.querySelectorAll(".alternativ").forEach((x) => { x.disabled = false; x.classList.remove("riktig", "feil", "nedtonet"); });
+        s.querySelector(".tilbakemelding").hidden = true;
+      });
+      resultat.hidden = true;
+      sporsmal[0].scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  });
+  visQuizMerker();
+
   oppdater();
 })();

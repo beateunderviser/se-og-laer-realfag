@@ -69,25 +69,26 @@ const ikon = (navn, cls = "ico") =>
 const kort = (s, n = 155) => (s.length <= n ? s : s.slice(0, s.lastIndexOf(" ", n - 1)) + " …");
 
 // ---------- Hent data ----------
-async function hentCSV() {
-  const url = process.env.SHEET_CSV_URL;
+// Henter en fane fra regnearket (miljøvariabel) eller fra en lokal fil.
+async function hentCSV(miljo, fil, kolonne, navn) {
+  const url = process.env[miljo];
   if (url) {
     try {
       const res = await fetch(url, { redirect: "follow" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const tekst = await res.text();
-      if (!/tittel/i.test(tekst.split("\n")[0])) throw new Error("fant ikke kolonnen «tittel» i første rad");
-      console.log("Hentet videoer fra Google Regneark.");
+      if (!new RegExp(kolonne, "i").test(tekst.split("\n")[0])) throw new Error(`fant ikke kolonnen «${kolonne}» i første rad`);
+      console.log(`Hentet ${navn} fra Google Regneark.`);
       return tekst;
     } catch (e) {
-      throw new Error(`Klarte ikke å hente regnearket (${e.message}). Sjekk at SHEET_CSV_URL er riktig og at arket er publisert som CSV.`);
+      throw new Error(`Klarte ikke å hente ${navn} fra regnearket (${e.message}). Sjekk at ${miljo} er riktig og at regnearket er delt med «Alle med linken».`);
     }
   }
-  console.log("SHEET_CSV_URL er ikke satt. Bruker data/videoer.csv.");
-  return readFile("data/videoer.csv", "utf8");
+  console.log(`${miljo} er ikke satt. Bruker ${fil}.`);
+  return readFile(fil, "utf8");
 }
 
-function byggData(rader) {
+function byggData(rader, huskelapp, quiz) {
   const advarsler = [];
   const kurs = KURS.map((k) => ({ ...k, temaer: k.temaer.map((t) => ({ ...t, videoer: [] })) }));
   rader.forEach((r, i) => {
@@ -117,8 +118,33 @@ function byggData(rader) {
       brukt.add(s);
       v.slug = s;
       v.sti = `/${k.slug}/${t.slug}/${s}/`;
+      v.quiz = [];
     }
+    t.huskelapp = [];
   }
+
+  // Huskelapp: én rad per formel, begrep eller tips
+  huskelapp.forEach((r, i) => {
+    const k = kurs.find((x) => norm(x.navn) === norm(r.kurs || "Kjemi 1"));
+    const t = k?.temaer.find((x) => norm(x.navn) === norm(r.tema));
+    if (!t) return advarsler.push(`Huskelapp rad ${i + 2}: ukjent tema «${r.tema}»`);
+    if (!r.tittel && !r.innhold) return;
+    const type = /formel/i.test(r.type) ? "formel" : /tips|feil|husk/i.test(r.type) ? "tips" : "begrep";
+    t.huskelapp.push({ type, tittel: r.tittel, innhold: r.innhold, forklaring: r.forklaring || "" });
+  });
+
+  // Quiz: én rad per spørsmål, koblet til videoen med YouTube-lenken
+  const alleVideoer = kurs.flatMap((k) => k.temaer.flatMap((t) => t.videoer));
+  quiz.forEach((r, i) => {
+    const id = youtubeId(r.youtube || "");
+    const v = alleVideoer.find((x) => x.id === id);
+    if (!v) return advarsler.push(`Quiz rad ${i + 2}: fant ingen video med lenken «${r.youtube}»`);
+    const alt = ["a", "b", "c", "d"].map((x) => r[x]).filter(Boolean);
+    const riktig = "abcd".indexOf((r.riktig || "").trim().toLowerCase());
+    if (!r.sporsmal || alt.length < 2) return advarsler.push(`Quiz rad ${i + 2}: mangler spørsmål eller svaralternativer`);
+    if (riktig < 0 || riktig >= alt.length) return advarsler.push(`Quiz rad ${i + 2}: «riktig» må være A, B, C eller D`);
+    v.quiz.push({ sporsmal: r.sporsmal, alt, riktig, forklaring: r.forklaring || "" });
+  });
   return { kurs, advarsler };
 }
 
@@ -161,6 +187,7 @@ ${ld}
       ${nav("/kjemi-1/", "Kjemi 1", "kjemi-1")}
       ${nav("/kjemi-2/", "Kjemi 2", "kjemi-2")}
       ${nav("/eksamen/", "Eksamensmodus", "eksamen")}
+      ${nav("/om/", "Om", "om")}
     </nav>
     <div class="sok" role="search">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -174,7 +201,7 @@ ${innhold}
 </main>
 <footer class="bunn">
   <div class="wrap">
-    <p><strong>${esc(SITE.navn)}</strong> · Gratis kjemivideoer for videregående skole.</p>
+    <p><strong>${esc(SITE.navn)}</strong> · Gratis kjemivideoer for videregående skole, laget av <a href="/om/">${esc(SITE.forfatter)}</a>.</p>
     <p><a href="${SITE.youtube}" rel="noopener">Følg kanalen på YouTube</a></p>
   </div>
 </footer>
@@ -197,6 +224,29 @@ const fremdrift = (ids, tekst = true) =>
 const thumb = (id) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
 
 const settKnapp = (id) => `<button class="dot" type="button" data-sett="${id}" aria-pressed="false" aria-label="Marker som sett"></button>`;
+
+// Huskelapp: formler som kort, begreper som liste, tips til slutt
+function huskelappHtml(t) {
+  const formler = t.huskelapp.filter((x) => x.type === "formel");
+  const begreper = t.huskelapp.filter((x) => x.type === "begrep");
+  const tips = t.huskelapp.filter((x) => x.type === "tips");
+  return `${formler.length ? `<div class="formler">${formler.map((f) => `<div class="formel"><span class="formel-navn">${esc(f.tittel)}</span><span class="formel-uttrykk">${esc(f.innhold)}</span>${f.forklaring ? `<span class="formel-forkl">${esc(f.forklaring)}</span>` : ""}</div>`).join("")}</div>` : ""}
+    ${begreper.length ? `<dl class="begreper">${begreper.map((b) => `<div><dt>${esc(b.tittel)}</dt><dd>${esc(b.innhold)}${b.forklaring ? ` <span class="dempet">${esc(b.forklaring)}</span>` : ""}</dd></div>`).join("")}</dl>` : ""}
+    ${tips.length ? `<ul class="tips">${tips.map((x) => `<li><strong>${esc(x.tittel)}:</strong> ${esc(x.innhold)}${x.forklaring ? ` ${esc(x.forklaring)}` : ""}</li>`).join("")}</ul>` : ""}`;
+}
+
+const malFor = (k, t) => (t.mal || []).map((kode) => k.kompetansemal?.find((m) => m.kode === kode)).filter(Boolean);
+
+function malHtml(k, t) {
+  const mal = malFor(k, t);
+  if (!mal.length) return "";
+  return `<section class="blokk-seksjon" id="kompetansemal">
+    <h2>Kompetansemål</h2>
+    <p class="dempet">Temaet hjelper deg med disse målene i læreplanen. Eleven skal kunne …</p>
+    <ul class="mal">${mal.map((m) => `<li>${esc(m.tekst)}</li>`).join("")}</ul>
+    <p class="kilde">Kilde: <a href="${k.laereplan.url}" rel="noopener">${esc(k.laereplan.navn)}</a>, Utdanningsdirektoratet</p>
+  </section>`;
+}
 
 // ---------- Sider ----------
 function forside(data) {
@@ -253,6 +303,15 @@ function kursside(k) {
       <h3><a href="/${k.slug}/${t.slug}/">${ikon(t.ikon)}${esc(t.navn)}</a></h3>
       <ol>${t.videoer.map((v) => `<li>${settKnapp(v.id)}<a href="${v.sti}">${esc(v.tittel)}</a></li>`).join("")}</ol>
     </section>`).join("");
+  const malListe = (k.kompetansemal || []).length ? `<h2 class="under" id="kompetansemal">Kompetansemål i ${esc(k.navn)}</h2>
+    <p class="ingress">Slik henger temaene sammen med kompetansemålene i læreplanen. Eleven skal kunne …</p>
+    <ul class="mal-oversikt">${k.kompetansemal.map((m) => {
+      const temaer = m.gjennomgaende ? [] : k.temaer.filter((t) => (t.mal || []).includes(m.kode));
+      const merke = m.gjennomgaende ? `<span class="mal-tema gjennom">Gjennomgående i alle temaer</span>`
+        : temaer.map((t) => `<a class="mal-tema" style="--c:${t.farge}" href="/${k.slug}/${t.slug}/">${ikon(t.ikon)}${esc(t.navn)}</a>`).join("");
+      return `<li><p>${esc(m.tekst)}</p><div class="mal-temaer">${merke}</div></li>`;
+    }).join("")}</ul>
+    <p class="kilde">Kilde: <a href="${k.laereplan.url}" rel="noopener">${esc(k.laereplan.navn)}</a>, Utdanningsdirektoratet</p>` : "";
   return side({
     tittel: `${k.navn} – alle videoer sortert etter tema | ${SITE.navn}`,
     beskrivelse: k.beskrivelse, sti: `/${k.slug}/`, aktiv: k.slug,
@@ -267,7 +326,8 @@ function kursside(k) {
     <p class="ingress">${esc(k.beskrivelse)}</p>
     <div class="fliser">${fliser}</div>
     <h2 class="under">Alle videoer i ${esc(k.navn)}</h2>
-    <div class="alle">${alle}</div>`,
+    <div class="alle">${alle}</div>
+    ${malListe}`,
   });
 }
 
@@ -288,7 +348,7 @@ function temaside(k, t, nr) {
       <div class="vtekst">
         <h2><a href="${v.sti}">${esc(v.tittel)}</a></h2>
         ${v.beskrivelse ? `<p>${esc(v.beskrivelse)}</p>` : ""}
-        ${v.eksamen ? `<span class="merke">Eksamensviktig</span>` : ""}
+        ${v.eksamen || v.quiz.length ? `<div class="merker">${v.eksamen ? `<span class="merke">Eksamensviktig</span>` : ""}${v.quiz.length ? `<span class="merke quiz-merke" data-quiz-merke="${v.id}">Quiz</span>` : ""}</div>` : ""}
       </div>
       ${settKnapp(v.id)}
     </li>`).join("");
@@ -303,8 +363,70 @@ function temaside(k, t, nr) {
     innhold: `${smuler(ledd)}
     <div class="tema-topp" style="--c:${t.farge}"><div class="tema-ikon">${ikon(t.ikon)}</div><div><span class="eyebrow">Tema ${nr} · ${esc(k.navn)} · ${t.videoer.length} videoer</span><h1>${esc(t.navn)}</h1></div></div>
     <div class="tema-intro"><p class="ingress">${esc(t.beskrivelse)}</p><div class="tema-fremdrift">${fremdrift(ids)}</div></div>
+    ${t.huskelapp.length ? `<details class="huskelapp" style="--c:${t.farge}" open>
+      <summary><span>Huskelapp</span><span class="dempet">Formler og begreper i ${esc(t.navn)}</span></summary>
+      <div class="huskelapp-innhold">${huskelappHtml(t)}
+        <p><a href="/${k.slug}/${t.slug}/huskelapp/">Åpne huskelappen på egen side for utskrift</a></p>
+      </div>
+    </details>` : ""}
     <ol class="vliste" style="--c:${t.farge}">${liste}</ol>
-    <p class="start-her"><a class="knapp primar" href="${t.videoer[0].sti}">Start med første video →</a></p>`,
+    <p class="start-her"><a class="knapp primar" href="${t.videoer[0].sti}">Start med første video →</a></p>
+    ${malHtml(k, t)}`,
+  });
+}
+
+function huskelappside(k, t) {
+  const sti = `/${k.slug}/${t.slug}/huskelapp/`;
+  const ledd = [["Forside", "/"], [k.navn, `/${k.slug}/`], [t.navn, `/${k.slug}/${t.slug}/`], ["Huskelapp", sti]];
+  return side({
+    tittel: `Huskelapp: ${t.navn} – ${k.navn} | ${SITE.navn}`,
+    beskrivelse: kort(`Huskelapp i ${t.navn} for ${k.navn}: de viktigste formlene, begrepene og tipsene samlet på én side.`),
+    sti, aktiv: k.slug,
+    jsonld: [smulerLd(ledd)],
+    innhold: `${smuler(ledd)}
+    <article class="huskelapp-side" style="--c:${t.farge}">
+      <div class="tema-topp"><div class="tema-ikon">${ikon(t.ikon)}</div><div><span class="eyebrow">Huskelapp · ${esc(k.navn)}</span><h1>${esc(t.navn)}</h1></div></div>
+      ${huskelappHtml(t)}
+      <p class="skjul-utskrift"><a href="/${k.slug}/${t.slug}/">← Tilbake til videoene i ${esc(t.navn)}</a></p>
+      <p class="kun-utskrift">${esc(SITE.navn)} · ${SITE.url.replace(/^https?:\/\//, "")}</p>
+    </article>`,
+  });
+}
+
+function omside() {
+  const ledd = [["Forside", "/"], ["Om", "/om/"]];
+  return side({
+    tittel: `Om ${SITE.navn} og ${SITE.forfatter}`,
+    beskrivelse: `${SITE.navn} er laget av ${SITE.forfatter}, kjemilærer ved Sandefjord videregående skole. Videoene er en støtte til undervisningen i Kjemi 1 og Kjemi 2.`,
+    sti: "/om/", aktiv: "om",
+    jsonld: [smulerLd(ledd), {
+      "@type": "AboutPage", name: `Om ${SITE.navn}`, url: SITE.url + "/om/",
+      mainEntity: {
+        "@type": "Person", name: SITE.forfatter, jobTitle: "Lærer",
+        worksFor: { "@type": "EducationalOrganization", name: "Sandefjord videregående skole" },
+        alumniOf: { "@type": "CollegeOrUniversity", name: "OsloMet – storbyuniversitetet" },
+        knowsAbout: ["Kjemi", "Naturfag", "Matematikk"], sameAs: [SITE.youtube],
+      },
+    }],
+    innhold: `${smuler(ledd)}
+    <div class="om">
+      <div class="om-bilde">${SITE.bilde ? `<img src="${SITE.bilde}" alt="${esc(SITE.forfatter)}" width="320" height="320">` : `<span aria-hidden="true">BT</span>`}</div>
+      <div class="om-tekst">
+        <span class="eyebrow">Om meg</span>
+        <h1>Hei, jeg heter ${esc(SITE.forfatter)}</h1>
+        <p class="ingress">Jeg er lærer ved Sandefjord videregående skole, der jeg underviser i Kjemi 1, Kjemi 2, naturfag og matematikk. Jeg er utdannet ingeniør i kjemi og bioteknologi ved OsloMet.</p>
+        <h2>Hvorfor jeg lager videoene</h2>
+        <p>Videoene er laget som en ressurs til min egen kjemiundervisning. De er ment som en støtte til undervisningen og fungerer best sammen med andre måter å lære på, som å jobbe med oppgaver og å samarbeide med andre.</p>
+        <h2>Slik kan du bruke siden</h2>
+        <ul>
+          <li>Følg videoene i hvert tema i anbefalt rekkefølge, eller bruk søket for å finne akkurat det du trenger.</li>
+          <li>Bruk huskelappen for hvert tema når du repeterer formler og begreper.</li>
+          <li>Ta quizen etter en video for å sjekke at du har forstått det viktigste.</li>
+          <li>Bruk eksamensmodus for å lage en repetisjonsplan før prøver og eksamen.</li>
+        </ul>
+        <p><a class="knapp primar" href="${SITE.youtube}" rel="noopener">Se kanalen på YouTube</a></p>
+      </div>
+    </div>`,
   });
 }
 
@@ -351,6 +473,15 @@ function videoside(k, t, v, i) {
           ${v.beskrivelse ? `<p class="beskr">${esc(v.beskrivelse)}</p>` : ""}
           ${v.eksamen ? `<p><span class="merke">Eksamensviktig</span></p>` : ""}
           ${stempler ? `<section class="blokk"><h2>Innhold i videoen</h2>${stempler}</section>` : ""}
+          ${v.quiz.length ? `<section class="blokk quiz" data-quiz="${v.id}">
+            <h2>Sjekk deg selv</h2>
+            <ol class="quiz-liste">${v.quiz.map((q, qi) => `<li class="sporsmal" data-riktig="${q.riktig}">
+              <p class="sporsmal-tekst">${esc(q.sporsmal)}</p>
+              <div class="alternativer">${q.alt.map((a, ai) => `<button type="button" class="alternativ" data-svar="${ai}"><span class="bokstav">${"ABCD"[ai]}</span>${esc(a)}</button>`).join("")}</div>
+              <p class="tilbakemelding" hidden><strong></strong> ${esc(q.forklaring)}</p>
+            </li>`).join("")}</ol>
+            <div class="quiz-resultat" hidden><p></p><button type="button" class="knapp quiz-igjen">Prøv igjen</button></div>
+          </section>` : ""}
           ${v.oppgaver ? `<section class="blokk"><h2>Oppgaver</h2><a class="oppgave" href="${esc(v.oppgaver)}" rel="noopener">Åpne oppgaver til denne videoen</a></section>` : ""}
           <div class="navrad">
             ${forrige ? `<a class="knapp" href="${forrige.sti}" rel="prev">← Forrige</a>` : `<span></span>`}
@@ -415,7 +546,12 @@ async function skriv(fil, innhold) {
 const hash = (s) => createHash("md5").update(s).digest("hex").slice(0, 8);
 
 async function main() {
-  const { kurs, advarsler } = byggData(parseCSV(await hentCSV()));
+  const [videoer, huskelapp, quiz] = await Promise.all([
+    hentCSV("SHEET_CSV_URL", "data/videoer.csv", "tittel", "videoene"),
+    hentCSV("HUSKELAPP_CSV_URL", "data/huskelapp.csv", "innhold", "huskelappene"),
+    hentCSV("QUIZ_CSV_URL", "data/quiz.csv", "riktig", "quizen"),
+  ]);
+  const { kurs, advarsler } = byggData(parseCSV(videoer), parseCSV(huskelapp), parseCSV(quiz));
   advarsler.forEach((a) => console.warn("Advarsel: " + a));
   const data = { kurs };
 
@@ -436,6 +572,10 @@ async function main() {
     for (const [ti, t] of k.temaer.entries()) {
       await skriv(`${k.slug}/${t.slug}/index.html`, temaside(k, t, ti + 1));
       sider.push(`/${k.slug}/${t.slug}/`);
+      if (t.huskelapp.length) {
+        await skriv(`${k.slug}/${t.slug}/huskelapp/index.html`, huskelappside(k, t));
+        sider.push(`/${k.slug}/${t.slug}/huskelapp/`);
+      }
       for (const [i, v] of t.videoer.entries()) {
         await skriv(`${k.slug}/${t.slug}/${v.slug}/index.html`, videoside(k, t, v, i));
         sider.push(v.sti);
@@ -444,6 +584,9 @@ async function main() {
   }
   await skriv("eksamen/index.html", eksamensside(data));
   sider.push("/eksamen/");
+  await skriv("om/index.html", omside());
+  sider.push("/om/");
+  if (SITE.bilde) await cp(path.join("src", path.basename(SITE.bilde)), path.join(OUT, path.basename(SITE.bilde)));
   await skriv("404.html", ikkeFunnet());
 
   // Søkeindeks for søkefeltet

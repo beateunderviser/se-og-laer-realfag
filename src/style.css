@@ -1,7 +1,7 @@
 /* Se og lær realfag – ren lys side, temaer som fliser, video og spilleliste side om side */
 :root {
   --bg: #F6F8FA; --flate: #FFFFFF; --tekst: #13202B; --dempet: #56636F; --strek: #E1E6EB;
-  --aksent: #0E5A73; --aksent-myk: #E3F0F4; --ok: #2E7D3E;
+  --aksent: #0E5A73; --aksent-myk: #E3F0F4; --ok: #2E7D3E; --feil: #C0392B;
   --cmix: 100%;
   --display: "Sora", ui-sans-serif, system-ui, sans-serif;
   --brod: "Manrope", ui-sans-serif, system-ui, sans-serif;
@@ -11,7 +11,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0F161C; --flate: #162029; --tekst: #E8EEF2; --dempet: #9AA8B4; --strek: #26323D;
-    --aksent: #6CC3DE; --aksent-myk: #17323D; --ok: #5CC274; --cmix: 72%;
+    --aksent: #6CC3DE; --aksent-myk: #17323D; --ok: #5CC274; --feil: #F07A6A; --cmix: 72%;
     color-scheme: dark;
   }
 }
@@ -212,5 +212,94 @@ h2.under { font-size: 22px; margin: 48px 0 16px; }
 .bunn { border-top: 1px solid var(--strek); padding-block: 22px; color: var(--dempet); font-size: 14px; }
 .bunn .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .bunn a { color: var(--dempet); }
+
+
+/* Felles småting */
+.dempet { color: var(--dempet); }
+.kilde { font-size: 13px; color: var(--dempet); margin-top: 10px; }
+.kilde a { color: var(--dempet); }
+.merker { display: flex; gap: 6px; flex-wrap: wrap; }
+.quiz-merke.tatt { background: color-mix(in srgb, var(--ok) 14%, var(--flate)); color: var(--ok); }
+
+/* Huskelapp */
+.huskelapp { background: var(--flate); border: 1px solid var(--strek); border-radius: 14px; margin-bottom: 24px; overflow: hidden; }
+.huskelapp summary { cursor: pointer; padding: 14px 18px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; list-style: none;
+  border-left: 4px solid color-mix(in srgb, var(--c) var(--cmix), var(--tekst)); }
+.huskelapp summary::-webkit-details-marker { display: none; }
+.huskelapp summary > span:first-child { font-family: var(--display); font-weight: 600; font-size: 17px; }
+.huskelapp summary::after { content: "Vis"; margin-left: auto; font-size: 13px; font-weight: 600; color: var(--aksent); }
+.huskelapp[open] summary::after { content: "Skjul"; }
+.huskelapp-innhold { padding: 4px 18px 18px; display: grid; gap: 18px; }
+.formler { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.formel { display: grid; gap: 4px; align-content: start; padding: 12px 14px; border-radius: 10px; background: color-mix(in srgb, var(--c) 9%, var(--flate)); border: 1px solid color-mix(in srgb, var(--c) 25%, var(--flate)); }
+.formel-navn { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; color: var(--dempet); }
+.formel-uttrykk { font-family: var(--mono); font-size: 17px; color: var(--tekst); overflow-wrap: anywhere; }
+.formel-forkl { font-size: 13px; color: var(--dempet); }
+.begreper { margin: 0; display: grid; gap: 0; }
+.begreper > div { display: grid; grid-template-columns: minmax(140px, 220px) minmax(0, 1fr); gap: 4px 18px; padding: 9px 0; border-top: 1px solid var(--strek); }
+.begreper > div:first-child { border-top: 0; }
+.begreper dt { font-weight: 700; }
+.begreper dd { margin: 0; }
+@media (max-width: 640px) { .begreper > div { grid-template-columns: 1fr; } }
+.tips { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.huskelapp-side { display: grid; gap: 20px; }
+
+/* Kompetansemål */
+.blokk-seksjon { margin-top: 40px; }
+.blokk-seksjon h2 { font-size: 20px; margin-bottom: 6px; }
+.mal { margin: 12px 0 0; padding-left: 20px; display: grid; gap: 8px; max-width: 75ch; }
+.mal-oversikt { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 0; background: var(--flate); border: 1px solid var(--strek); border-radius: 14px; }
+.mal-oversikt li { padding: 14px 18px; border-top: 1px solid var(--strek); display: grid; gap: 8px; }
+.mal-oversikt li:first-child { border-top: 0; }
+.mal-oversikt p { max-width: 80ch; }
+.mal-temaer { display: flex; flex-wrap: wrap; gap: 6px; }
+.mal-tema { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; text-decoration: none; color: var(--tekst);
+  background: color-mix(in srgb, var(--c) 13%, var(--flate)); }
+.mal-tema .ico { color: color-mix(in srgb, var(--c) var(--cmix), var(--tekst)); }
+.mal-tema.gjennom { background: var(--bg); color: var(--dempet); border: 1px dashed var(--strek); }
+
+/* Quiz */
+.quiz-liste { margin: 0; padding: 0; list-style: none; display: grid; gap: 18px; counter-reset: q; }
+.sporsmal { counter-increment: q; display: grid; gap: 10px; }
+.sporsmal-tekst { font-weight: 600; }
+.sporsmal-tekst::before { content: counter(q) ". "; color: var(--dempet); }
+.alternativer { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 560px) { .alternativer { grid-template-columns: 1fr; } }
+.alternativ { display: flex; gap: 10px; align-items: center; text-align: left; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--strek); background: var(--flate); cursor: pointer; font-size: 15px; }
+.alternativ:hover:not(:disabled) { border-color: var(--aksent); }
+.alternativ:disabled { cursor: default; }
+.alternativ .bokstav { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; flex: none; font-size: 12px; font-weight: 700; background: var(--bg); color: var(--dempet); }
+.alternativ.riktig { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--flate)); }
+.alternativ.riktig .bokstav { background: var(--ok); color: var(--flate); }
+.alternativ.feil { border-color: var(--feil); background: color-mix(in srgb, var(--feil) 10%, var(--flate)); }
+.alternativ.feil .bokstav { background: var(--feil); color: var(--flate); }
+.alternativ.nedtonet { opacity: .55; }
+.tilbakemelding { font-size: 14px; color: var(--dempet); padding: 10px 12px; border-radius: 8px; background: var(--bg); }
+.tilbakemelding.ok strong { color: var(--ok); }
+.tilbakemelding.nei strong { color: var(--feil); }
+.quiz-resultat { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding: 12px 14px; border-radius: 10px; background: var(--aksent-myk); }
+.quiz-resultat p { font-weight: 700; }
+
+/* Om */
+.om { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 40px; align-items: start; margin-top: 12px; }
+@media (max-width: 760px) { .om { grid-template-columns: 1fr; gap: 24px; } }
+.om-bilde { width: 100%; max-width: 240px; aspect-ratio: 1; border-radius: 20px; overflow: hidden; background: var(--aksent-myk); display: grid; place-items: center; }
+.om-bilde img { width: 100%; height: 100%; object-fit: cover; }
+.om-bilde span { font-family: var(--display); font-weight: 700; font-size: 64px; color: var(--aksent); }
+.om-tekst { display: grid; gap: 14px; max-width: 66ch; }
+.om-tekst h1 { font-size: clamp(26px, 3.6vw, 38px); }
+.om-tekst h2 { font-size: 19px; margin-top: 10px; }
+.om-tekst ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+
+/* Utskrift */
+.kun-utskrift { display: none; }
+@media print {
+  .topp, .bunn, .smuler, .skip, .skjul-utskrift, .sett-knapp, .dot { display: none !important; }
+  .kun-utskrift { display: block; color: #555; font-size: 11px; }
+  body { background: #fff; color: #000; font-size: 12px; }
+  main { padding: 0; }
+  .formel, .huskelapp { break-inside: avoid; }
+  a { color: inherit; text-decoration: none; }
+}
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
